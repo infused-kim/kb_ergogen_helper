@@ -22,15 +22,54 @@ def get_traces(pcb):
     return traces
 
 
+def check_traces_equal(trace_1, trace_2):
+    if (trace_1.GetStart() == trace_2.GetStart() and
+       trace_1.GetEnd() == trace_2.GetEnd()):
+        return True
+    else:
+        return False
+
+
+def pcb_has_trace(pcb, lookup_trace):
+    traces = pcb.GetTracks()
+
+    for pcb_trace in traces:
+        if check_traces_equal(lookup_trace, pcb_trace) is True:
+            return True
+
+    return False
+
+
+def get_trace_descr(trace):
+    start_x = trace.GetStart()[0] / 1000000
+    start_y = trace.GetStart()[1] / 1000000
+    end_x = trace.GetEnd()[0] / 1000000
+    end_y = trace.GetEnd()[1] / 1000000
+    length = trace.GetLength() / 1000000
+
+    return f'({start_x}, {start_y}) -> ({end_x}, {end_y}) ({length}mm)'
+
+
 def copy_traces(src_pcb, dst_pcb):
     traces = get_traces(src_pcb)
 
+    skipped = 0
     for trace in traces:
         try:
+            if pcb_has_trace(dst_pcb, trace) is True:
+                print(
+                    f'WARN: Skipping trace {get_trace_descr(trace)}: '
+                    f'Already present in pcb.'
+                )
+                skipped += 1
+                continue
             dst_pcb.Add(trace)
         except Exception as e:
             err = f'Could not copy trace: {e}'
             raise ErgogenHelperException(err) from e
+
+    copied = len(traces) - skipped
+    print(f'Copied {copied} / {len(traces)} traces.')
 
 
 def save_pcb(pcb, should_backup, backup_name):
