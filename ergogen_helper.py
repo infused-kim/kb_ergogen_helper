@@ -91,35 +91,7 @@ def save_pcb(pcb, should_backup, backup_name):
         raise ErgogenHelperException(err) from e
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='Copies elements from one kicad file to another.'
-    )
-    parser.add_argument(
-        'src_pcb_path',
-        help='The source PCB file path.'
-    )
-    parser.add_argument(
-        'dst_pcb_path',
-        help='The destination PCB file path.'
-    )
-    parser.add_argument(
-        '-n', '--backup-name',
-        default="orig",
-        help=(
-            'String to append to the filename of the backup '
-            '(default: %(default)s)'
-        )
-    )
-    parser.add_argument(
-        '-b', '--no-backup',
-        default=False,
-        action='store_true',
-        help='Skip backup of PCB (default: %(default)s)'
-    )
-
-    args = parser.parse_args()
-
+def cmd_copy_traces(args):
     try:
         src_pcb = pcbnew.LoadBoard(args.src_pcb_path)
         dst_pcb = pcbnew.LoadBoard(args.dst_pcb_path)
@@ -129,6 +101,51 @@ def main():
     except ErgogenHelperException as e:
         print(f'ERROR: {e}')
         exit(-1)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Utility to make ergogen keyboard development easier.'
+    )
+    subparsers = parser.add_subparsers(title='command', dest='cmd')
+
+    # Subcommand: copy-traces
+    copy_traces_parser = subparsers.add_parser(
+        'copy-traces',
+        help='Copy traces from source PCB to destination PCB'
+    )
+    copy_traces_parser.add_argument(
+        'src_pcb_path',
+        help='The source PCB file path.'
+    )
+    copy_traces_parser.add_argument(
+        'dst_pcb_path',
+        help='The destination PCB file path.'
+    )
+    copy_traces_parser.add_argument(
+        '-n', '--backup-name',
+        default="orig",
+        help=(
+            'String to append to the filename of the backup '
+            '(default: %(default)s)'
+        )
+    )
+    copy_traces_parser.add_argument(
+        '-b', '--no-backup',
+        default=False,
+        action='store_true',
+        help='Skip backup of PCB (default: %(default)s)'
+    )
+    copy_traces_parser.set_defaults(func=cmd_copy_traces)
+
+    args = parser.parse_args()
+
+    if args.cmd is None:
+        parser.print_help()
+        return
+
+    # Call the appropriate subcommand function based on the selected subcommand
+    args.func(args)
 
 
 if __name__ == '__main__':
