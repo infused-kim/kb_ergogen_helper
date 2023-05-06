@@ -103,13 +103,37 @@ def cmd_copy_traces(args):
         exit(-1)
 
 
+def cmd_update_pcb(args):
+    try:
+        pcb = pcbnew.LoadBoard(args.pcb_path)
+        save_pcb(pcb, not args.no_backup, args.backup_name)
+    except ErgogenHelperException as e:
+        print(f'ERROR: {e}')
+        exit(-1)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Utility to make ergogen keyboard development easier.'
     )
     subparsers = parser.add_subparsers(title='command', dest='cmd')
 
-    # Subcommand: copy-traces
+    parser.add_argument(
+        '-n', '--backup-name',
+        default="orig",
+        help=(
+            'String to append to the filename of the backup '
+            '(default: %(default)s)'
+        )
+    )
+    parser.add_argument(
+        '-b', '--no-backup',
+        default=False,
+        action='store_true',
+        help='Skip backup of PCB (default: %(default)s)'
+    )
+
+    # Command: copy-traces
     copy_traces_parser = subparsers.add_parser(
         'copy-traces',
         help='Copy traces from source PCB to destination PCB'
@@ -122,21 +146,20 @@ def main():
         'dst_pcb_path',
         help='The destination PCB file path.'
     )
-    copy_traces_parser.add_argument(
-        '-n', '--backup-name',
-        default="orig",
+    copy_traces_parser.set_defaults(func=cmd_copy_traces)
+
+    # Subcommand: update-pcb
+    update_pcb = subparsers.add_parser(
+        'update-pcb',
         help=(
-            'String to append to the filename of the backup '
-            '(default: %(default)s)'
+            'Update KiCad pcb from v5 to v7 by opening it and saving it again.'
         )
     )
-    copy_traces_parser.add_argument(
-        '-b', '--no-backup',
-        default=False,
-        action='store_true',
-        help='Skip backup of PCB (default: %(default)s)'
+    update_pcb.add_argument(
+        'pcb_path',
+        help='The KiCad PCB file path.'
     )
-    copy_traces_parser.set_defaults(func=cmd_copy_traces)
+    update_pcb.set_defaults(func=cmd_update_pcb)
 
     args = parser.parse_args()
 
