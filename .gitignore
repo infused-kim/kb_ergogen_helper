@@ -1,1 +1,7 @@
+# OS Files
 .DS_Store
+
+# Python Files
+__pycache__/
+*.py[cod]
+*$py.class
