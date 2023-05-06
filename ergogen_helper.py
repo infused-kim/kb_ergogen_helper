@@ -12,12 +12,19 @@ class ErgogenHelperException(Exception):
     pass
 
 
-def get_traces(pcb):
+def get_traces(pcb, unlocked_only=False):
     try:
         traces = pcb.GetTracks()
     except Exception as e:
         err = f'ERROR: Could not get traces: {e}'
         raise ErgogenHelperException(err) from e
+
+    if unlocked_only is True:
+        unlocked_traces = []
+        for trace in traces:
+            if trace.IsLocked() is False:
+                unlocked_traces.append(trace)
+        traces = unlocked_traces
 
     return traces
 
@@ -50,8 +57,8 @@ def get_trace_descr(trace):
     return f'({start_x}, {start_y}) -> ({end_x}, {end_y}) ({length}mm)'
 
 
-def copy_traces(src_pcb, dst_pcb):
-    traces = get_traces(src_pcb)
+def copy_traces(src_pcb, dst_pcb, unlocked_only=False):
+    traces = get_traces(src_pcb, unlocked_only=unlocked_only)
 
     skipped = 0
     for trace in traces:
@@ -70,6 +77,15 @@ def copy_traces(src_pcb, dst_pcb):
 
     copied = len(traces) - skipped
     print(f'Copied {copied} / {len(traces)} traces.')
+
+
+def lock_traces(pcb):
+    traces = get_traces(pcb)
+
+    for trace in traces:
+        trace.SetLocked(True)
+
+    print(f'Locked {len(traces)} traces...')
 
 
 def save_pcb(pcb, should_backup, backup_name):
@@ -96,7 +112,7 @@ def cmd_copy_traces(args):
         src_pcb = pcbnew.LoadBoard(args.src_pcb_path)
         dst_pcb = pcbnew.LoadBoard(args.dst_pcb_path)
 
-        copy_traces(src_pcb, dst_pcb)
+        copy_traces(src_pcb, dst_pcb, args.unlocked_only)
         save_pcb(dst_pcb, not args.no_backup, args.backup_name)
     except ErgogenHelperException as e:
         print(f'ERROR: {e}')
@@ -106,6 +122,16 @@ def cmd_copy_traces(args):
 def cmd_update_pcb(args):
     try:
         pcb = pcbnew.LoadBoard(args.pcb_path)
+        save_pcb(pcb, not args.no_backup, args.backup_name)
+    except ErgogenHelperException as e:
+        print(f'ERROR: {e}')
+        exit(-1)
+
+
+def cmd_lock_traces(args):
+    try:
+        pcb = pcbnew.LoadBoard(args.pcb_path)
+        lock_traces(pcb)
         save_pcb(pcb, not args.no_backup, args.backup_name)
     except ErgogenHelperException as e:
         print(f'ERROR: {e}')
@@ -146,7 +172,29 @@ def main():
         'dst_pcb_path',
         help='The destination PCB file path.'
     )
+    copy_traces_parser.add_argument(
+        '-u', '--unlocked-only',
+        default=False,
+        action='store_true',
+        help=(
+            'Skip locked traces and only copy unlocked ones '
+            '(default: %(default)s)'
+        )
+    )
     copy_traces_parser.set_defaults(func=cmd_copy_traces)
+
+    # Subcommand: lock-traces
+    update_pcb = subparsers.add_parser(
+        'lock-traces',
+        help=(
+            'Sets all traces inside a KiCad PCB file to locked.'
+        )
+    )
+    update_pcb.add_argument(
+        'pcb_path',
+        help='The KiCad PCB file path.'
+    )
+    update_pcb.set_defaults(func=cmd_lock_traces)
 
     # Subcommand: update-pcb
     update_pcb = subparsers.add_parser(
