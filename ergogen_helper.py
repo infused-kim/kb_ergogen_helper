@@ -12,19 +12,12 @@ class ErgogenHelperException(Exception):
     pass
 
 
-def get_traces(pcb, unlocked_only=False):
+def get_traces(pcb):
     try:
         traces = pcb.GetTracks()
     except Exception as e:
         err = f'ERROR: Could not get traces: {e}'
         raise ErgogenHelperException(err) from e
-
-    if unlocked_only is True:
-        unlocked_traces = []
-        for trace in traces:
-            if trace.IsLocked() is False:
-                unlocked_traces.append(trace)
-        traces = unlocked_traces
 
     return traces
 
@@ -57,26 +50,49 @@ def get_trace_descr(trace):
     return f'({start_x}, {start_y}) -> ({end_x}, {end_y}) ({length}mm)'
 
 
-def copy_traces(src_pcb, dst_pcb, unlocked_only=False):
-    traces = get_traces(src_pcb, unlocked_only=unlocked_only)
+def filter_existing_traces(traces, pcb):
+    filtered_traces = []
+    for trace in traces:
+        if pcb_has_trace(pcb, trace) is False:
+            filtered_traces.append(trace)
 
-    skipped = 0
+    removed_count = len(traces) - len(filtered_traces)
+
+    return (removed_count, filtered_traces)
+
+
+def filter_locked_traces(traces):
+    filtered_traces = []
+    for trace in traces:
+        if trace.IsLocked() is False:
+            filtered_traces.append(trace)
+
+    removed_count = len(traces) - len(filtered_traces)
+
+    return (removed_count, filtered_traces)
+
+
+def copy_traces(src_pcb, dst_pcb, unlocked_only=False):
+    traces = get_traces(src_pcb)
+    traces_total = len(traces)
+
+    if unlocked_only is True:
+        locked_num, traces = filter_locked_traces(traces)
+        if locked_num > 0:
+            print(f'WARN: Skipped {locked_num} locked traces')
+
+    existing_num, traces = filter_existing_traces(traces, dst_pcb)
+    if existing_num > 0:
+        print(f'WARN: Skipped {existing_num} existing traces')
+
     for trace in traces:
         try:
-            if pcb_has_trace(dst_pcb, trace) is True:
-                print(
-                    f'WARN: Skipping trace {get_trace_descr(trace)}: '
-                    f'Already present in pcb.'
-                )
-                skipped += 1
-                continue
             dst_pcb.Add(trace)
         except Exception as e:
             err = f'Could not copy trace: {e}'
             raise ErgogenHelperException(err) from e
 
-    copied = len(traces) - skipped
-    print(f'Copied {copied} / {len(traces)} traces.')
+    print(f'Copied {len(traces)} / {traces_total} traces.')
 
 
 def lock_traces(pcb):
