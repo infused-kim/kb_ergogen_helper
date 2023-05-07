@@ -4,6 +4,17 @@ Scripts that make working a little bit easier with [ergogen](https://github.com/
 
 The most useful function is that it allows you to restore traces / routing after you re-generate your PCB with ergogen.
 
+1. [Installation](#installation)
+    1. [Add this repo as a submodule](#add-this-repo-as-a-submodule)
+    2. [How to update the submodule](#how-to-update-the-submodule)
+    3. [How to clone your ergogen repo](#how-to-clone-your-ergogen-repo)
+2. [Usage](#usage)
+    1. [Ergogen Helper Script](#ergogen-helper-script)
+        1. [Update PCB](#update-pcb)
+        2. [Copy Traces](#copy-traces)
+        3. [Lock Traces](#lock-traces)
+    2. [Makefiles](#makefiles)
+
 ## Installation
 
 ### Add this repo as a submodule
